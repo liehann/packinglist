@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, memo, useMemo } from 'react';
 import useSWR from 'swr';
 import { 
   Check, Plus, LoaderCircle, Package, Hash, FileText,
@@ -8,7 +8,7 @@ import {
   Ticket, Wallet, Droplet, Pill, Baby, Book, Apple,
   BaggageClaim, Footprints, Trash2
 } from 'lucide-react';
-import { motion, useAnimation } from 'framer-motion';
+import { motion, useAnimation, AnimatePresence } from 'framer-motion';
 
 interface Item {
   id: number;
@@ -84,48 +84,69 @@ const EditableField = ({ value, placeholder, className, onSave }: { value: strin
   );
 };
 
-const ItemRow = ({ item, color, hidden, updateItemField, deleteItem }: any) => {
+const ItemRow = memo(({ item, color, showPacked, updateItemField, deleteItem }: any) => {
   const controls = useAnimation();
   
-  const handleDragEnd = async (e: any, info: any) => {
+  const handleDragEnd = useCallback(async (e: any, info: any) => {
     const offset = info.offset.x;
     if (offset > 80) {
+      if (!showPacked) {
+        await controls.start({ 
+          x: window.innerWidth, 
+          opacity: 0, 
+          transition: { duration: 0.2, ease: "easeOut" } 
+        });
+      } else {
+        controls.start({ x: 0, transition: { type: 'spring', stiffness: 300, damping: 20 } });
+      }
       updateItemField(item.id, 'packed', !item.packed);
-      controls.start({ x: 0, transition: { type: 'spring', stiffness: 300, damping: 20 } });
     } else if (offset < -80) {
+      await controls.start({ 
+        x: -window.innerWidth, 
+        opacity: 0, 
+        transition: { duration: 0.2, ease: "easeOut" } 
+      });
       deleteItem(item.id);
     } else {
       controls.start({ x: 0, transition: { type: 'spring', stiffness: 300, damping: 20 } });
     }
-  };
-
+  }, [item.id, item.packed, showPacked, updateItemField, deleteItem, controls]);
   return (
-    <div 
-      className={`grid transition-[grid-template-rows,opacity] duration-500 ease-in-out ${hidden ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'}`}
+    <motion.div 
+      layout
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: 'auto', opacity: 1 }}
+      exit={{ height: 0, opacity: 0, marginBottom: 0 }}
+      transition={{ 
+        height: { duration: 0.3, ease: [0.4, 0, 0.2, 1] },
+        opacity: { duration: 0.2 }
+      }}
+      className="overflow-hidden relative group mb-3"
     >
-      <div className="overflow-hidden relative group pb-3">
-        {/* BACKGROUND ACTION LAYER */}
-        <div className="absolute inset-0 flex items-center justify-between px-6 rounded-xl mb-3 mt-0 bg-gray-100/80">
-          <div className="flex items-center gap-2 text-emerald-600 font-medium">
-             <BaggageClaim size={20} strokeWidth={2.5} />
-             <span className="text-sm hidden sm:inline-block">Pack</span>
-          </div>
-          <div className="flex items-center gap-2 text-red-500 font-medium tracking-wide">
-             <span className="text-sm hidden sm:inline-block">Delete</span>
-             <Trash2 size={20} strokeWidth={2.5} />
-          </div>
+      {/* BACKGROUND ACTION LAYER */}
+      <div className="absolute inset-0 flex items-center justify-between px-6 rounded-xl bg-gray-100/80">
+        <div className="flex items-center gap-2 text-emerald-600 font-medium">
+           <BaggageClaim size={20} strokeWidth={2.5} />
+           <span className="text-sm hidden sm:inline-block">Pack</span>
         </div>
+        <div className="flex items-center gap-2 text-red-500 font-medium tracking-wide">
+           <span className="text-sm hidden sm:inline-block">Delete</span>
+           <Trash2 size={20} strokeWidth={2.5} />
+        </div>
+      </div>
 
-        {/* FOREGROUND SWIPEABLE LAYER */}
-        <motion.div 
-          drag="x"
-          dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.4}
-          onDragEnd={handleDragEnd}
-          animate={controls}
-          style={{ touchAction: 'pan-y' }}
-          className={`relative z-10 flex items-center bg-white rounded-xl p-4 ring-1 ring-gray-900/5 shadow-sm transition-all duration-200 ${item.packed ? 'opacity-80 bg-gray-100' : ''}`}
-        >
+      {/* FOREGROUND SWIPEABLE LAYER */}
+      <motion.div 
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.5}
+        dragTransition={{ bounceStiffness: 600, bounceDamping: 30 }}
+        onDragEnd={handleDragEnd}
+        animate={controls}
+        style={{ touchAction: 'pan-y', willChange: 'transform' }}
+        className={`relative z-10 flex items-center bg-white rounded-xl p-4 ring-1 ring-gray-900/5 shadow-sm transition-opacity duration-200 ${item.packed ? 'bg-gray-100' : ''}`}
+      >
+
           {/* Checkbox */}
           <div className="mr-3 pl-1 shrink-0">
             <button 
@@ -176,52 +197,52 @@ const ItemRow = ({ item, color, hidden, updateItemField, deleteItem }: any) => {
               />
             </span>
           </div>
-        </motion.div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
-};
+});
 
 export default function PackingList() {
-  const { data, error, mutate } = useSWR<{ items: Item[] }>('/api/packing-list', fetcher);
+  const { data, error, mutate } = useSWR<{ items: Item[] }>('/api/packing-list', fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 5000,
+  });
   const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set());
   const [customSections, setCustomSections] = useState<string[]>([]);
   const [showPacked, setShowPacked] = useState<boolean>(true);
   
-  if (error) return <div className="p-8 text-center text-red-500">Failed to load packing list.</div>;
-  if (!data) return (
-    <div className="flex flex-col items-center justify-center h-screen gap-4 text-emerald-800">
-      <LoaderCircle className="animate-spin" size={48} />
-      <p>Loading your trip details...</p>
-    </div>
-  );
-
-  const items = data.items || [];
+  const items = data?.items || [];
   
-  const baseCategories = items.reduce((acc, currentItem) => {
-    const cat = currentItem.category || 'Uncategorized';
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(currentItem);
-    return acc;
-  }, {} as Record<string, Item[]>);
+  const categories = useMemo(() => {
+    const baseCategories = items.reduce((acc, currentItem) => {
+      const cat = currentItem.category || 'Uncategorized';
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(currentItem);
+      return acc;
+    }, {} as Record<string, Item[]>);
 
-  // Add empty custom sections locally
-  customSections.forEach(cat => {
-    if (!baseCategories[cat]) baseCategories[cat] = [];
-  });
+    // Add empty custom sections locally
+    customSections.forEach(cat => {
+      if (!baseCategories[cat]) baseCategories[cat] = [];
+    });
 
-  const categories = baseCategories;
+    return baseCategories;
+  }, [items, customSections]);
 
   const totalItems = items.length;
   const packedItems = items.filter(i => i.packed).length;
   const progressPercentage = totalItems === 0 ? 0 : Math.round((packedItems / totalItems) * 100);
 
-  const updateItemField = async (id: number, field: string, value: any) => {
-    // Optimistic UI update
-    const updatedItems = items.map(item => 
-      item.id === id ? { ...item, [field]: value } : item
-    );
-    mutate({ items: updatedItems }, false);
+  const updateItemField = useCallback(async (id: number, field: string, value: any) => {
+    // Optimistic UI update using functional mutate to keep callback reference stable
+    mutate((currentData: any) => {
+      if (!currentData?.items) return currentData;
+      const updatedItems = currentData.items.map((item: any) => 
+        item.id === id ? { ...item, [field]: value } : item
+      );
+      return { ...currentData, items: updatedItems };
+    }, false);
 
     try {
       await fetch('/api/packing-list', {
@@ -234,11 +255,15 @@ export default function PackingList() {
       console.error(e);
       mutate();
     }
-  };
+  }, [mutate]);
 
-  const deleteItem = async (id: number) => {
-    const updatedItems = items.filter(item => item.id !== id);
-    mutate({ items: updatedItems }, false);
+  const deleteItem = useCallback(async (id: number) => {
+    // Optimistic UI update
+    mutate((currentData: any) => {
+      if (!currentData?.items) return currentData;
+      const updatedItems = currentData.items.filter((item: any) => item.id !== id);
+      return { ...currentData, items: updatedItems };
+    }, false);
 
     try {
       await fetch(`/api/packing-list?rowId=${id}`, {
@@ -249,11 +274,10 @@ export default function PackingList() {
       console.error('Failed to delete item', e);
       mutate();
     }
-  };
+  }, [mutate]);
 
-  const handleInlineAdd = async (category: string, item: string, quantity: string) => {
+  const handleInlineAdd = useCallback(async (category: string, item: string, quantity: string) => {
     if (!item.trim()) return;
-    // Optimistic UI for new item isn't perfectly safe without knowing ID, so just mutate after
     try {
       await fetch('/api/packing-list', {
         method: 'POST',
@@ -264,7 +288,16 @@ export default function PackingList() {
     } catch (e) {
       console.error('Failed to inline add item', e);
     }
-  };
+  }, [mutate]);
+
+  if (error) return <div className="p-8 text-center text-red-500">Failed to load packing list.</div>;
+  if (!data) return (
+    <div className="flex flex-col items-center justify-center h-screen gap-4 text-emerald-800">
+      <LoaderCircle className="animate-spin" size={48} />
+      <p>Loading your trip details...</p>
+    </div>
+  );
+
 
   const handleAddSection = () => {
     const name = window.prompt("New section name:");
@@ -372,19 +405,23 @@ export default function PackingList() {
                   </h2>
                   
                   <div className="flex flex-col">
-                    {catItems.map((item) => {
-                      const hidden = !showPacked && item.packed;
-                      return (
-                        <ItemRow 
-                          key={item.id} 
-                          item={item} 
-                          color={color} 
-                          hidden={hidden} 
-                          updateItemField={updateItemField} 
-                          deleteItem={deleteItem} 
-                        />
-                      );
-                    })}
+                    <AnimatePresence initial={false}>
+                      {catItems
+                        .filter(item => showPacked || !item.packed)
+                        .map((item) => {
+                          return (
+                            <ItemRow 
+                              key={item.id} 
+                              item={item} 
+                              color={color} 
+                              showPacked={showPacked}
+                              updateItemField={updateItemField} 
+                              deleteItem={deleteItem} 
+                            />
+                          );
+                        })}
+                    </AnimatePresence>
+                  </div>
             <form 
               className="mt-1 flex items-center bg-gray-50/50 rounded-xl p-2 border border-dashed border-gray-300 transition-all focus-within:bg-white focus-within:border-solid focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 focus-within:shadow-sm"
               onSubmit={(e) => {
@@ -416,9 +453,8 @@ export default function PackingList() {
               <button type="submit" className="hidden">Submit</button>
             </form>
           </div>
-                </div>
-              );
-          })}
+        );
+      })}
         </div>
       </div>
     </div>
