@@ -165,19 +165,19 @@ export default function PackingList() {
       {/* STICKY HEADER */}
       <div className="flex-none pt-4 pb-4 px-4 sm:px-8 bg-white/95 backdrop-blur-md z-50 shadow-sm border-b border-black/5">
         <div className="max-w-3xl mx-auto">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-gray-50/80 rounded-2xl p-4 border border-gray-100 shadow-sm">
-            <div className="flex-1 flex justify-between sm:justify-start items-center gap-4">
+          <div className="flex items-center justify-between gap-3 bg-gray-50/80 rounded-2xl p-3 sm:p-4 border border-gray-100 shadow-sm">
+            <div className="flex-1 flex justify-between sm:justify-start items-center gap-3">
               <div className="text-sm font-medium text-gray-700 whitespace-nowrap shrink-0">
                 {packedItems} of {totalItems}
               </div>
-              <div className="flex-1 h-2.5 bg-gray-200 rounded-full overflow-hidden max-w-[200px] sm:max-w-none">
+              <div className="flex-1 h-2.5 bg-gray-200 rounded-full overflow-hidden min-w-[40px] max-w-full sm:max-w-none">
                 <div 
                   className="h-full bg-emerald-500 transition-all duration-500 ease-out" 
                   style={{ width: `${progressPercentage}%` }}
                 />
               </div>
             </div>
-            <div className="flex shrink-0 sm:border-l border-gray-200 sm:pl-4 justify-end items-center">
+            <div className="flex shrink-0 border-l border-gray-200 pl-3 sm:pl-4 justify-end items-center">
               <button 
                 onClick={() => setShowPacked(!showPacked)}
                 className={`flex items-center justify-center w-[34px] h-[34px] rounded-full transition-all border ${showPacked ? 'bg-[#bbf7d0] text-emerald-800 border-[#99f6b4] shadow-sm ring-1 ring-black/5' : 'bg-gray-100 text-gray-400 border-gray-200 shadow-inner'}`}
