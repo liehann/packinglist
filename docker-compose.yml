@@ -14,4 +14,4 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.packinglist.rule=Host(`packing.phloots.com`)"
-      - "coolify.traefik.middlewares=google-auth@docker"
+      - "traefik.http.routers.packinglist.middlewares=protect-this-app@file"
