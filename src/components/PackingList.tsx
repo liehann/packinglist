@@ -85,7 +85,7 @@ const EditableField = ({ value, placeholder, className, onSave }: { value: strin
 
 export default function PackingList() {
   const { data, error, mutate } = useSWR<{ items: Item[] }>('/api/packing-list', fetcher);
-  const [activeFilter, setActiveFilter] = useState<string>('All');
+  const [disabledFilters, setDisabledFilters] = useState<Set<string>>(new Set());
   const [customSections, setCustomSections] = useState<string[]>([]);
   const [showPacked, setShowPacked] = useState<boolean>(true);
   
@@ -167,8 +167,8 @@ export default function PackingList() {
         <div className="max-w-3xl mx-auto">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-gray-50/80 rounded-2xl p-4 border border-gray-100 shadow-sm">
             <div className="flex-1 flex justify-between sm:justify-start items-center gap-4">
-              <div className="text-sm font-medium text-gray-700 w-32 shrink-0">
-                {packedItems} of {totalItems} packed
+              <div className="text-sm font-medium text-gray-700 whitespace-nowrap shrink-0">
+                {packedItems} of {totalItems}
               </div>
               <div className="flex-1 h-2.5 bg-gray-200 rounded-full overflow-hidden max-w-[200px] sm:max-w-none">
                 <div 
@@ -196,15 +196,41 @@ export default function PackingList() {
           
           {/* SECTION SELECTORS */}
           <div className="flex flex-wrap items-center gap-2 mb-8">
-            {['All', ...Object.keys(categories)].map((filterCat, index) => {
-              const cc = index === 0 ? '#e5e7eb' : getCategoryColor(filterCat);
-              const isActive = activeFilter === filterCat;
+            {(() => {
+              const allCategories = Object.keys(categories);
+              const enabledCount = allCategories.filter(c => !disabledFilters.has(c)).length;
+              const isGreen = enabledCount > 0;
+              const toggleAll = () => {
+                if (isGreen) {
+                  setDisabledFilters(new Set(allCategories));
+                } else {
+                  setDisabledFilters(new Set());
+                }
+              };
+              return (
+                <button
+                  onClick={toggleAll}
+                  className={`flex items-center justify-center w-[30px] h-[30px] rounded-full transition-all border shrink-0 ${isGreen ? 'bg-[#bbf7d0] text-emerald-800 border-[#99f6b4] shadow-sm ring-1 ring-black/5' : 'bg-gray-100 text-gray-400 border-gray-200 shadow-inner'}`}
+                  title={isGreen ? "Deselect all" : "Select all"}
+                >
+                  <Check size={16} strokeWidth={isGreen ? 3 : 2} />
+                </button>
+              );
+            })()}
+            {Object.keys(categories).map((filterCat) => {
+              const cc = getCategoryColor(filterCat);
+              const isActive = !disabledFilters.has(filterCat);
               return (
                 <button 
                   key={filterCat} 
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all border ${isActive ? 'text-gray-900 shadow-md border-black/10 ring-1 ring-black/5 opacity-100 font-semibold' : 'text-gray-700 border-transparent shadow-sm hover:brightness-95 opacity-80 hover:opacity-100'}`}
-                  style={{ backgroundColor: cc }}
-                  onClick={() => setActiveFilter(filterCat)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all border ${isActive ? 'text-gray-900 shadow-md border-black/10 ring-1 ring-black/5 opacity-100 font-semibold' : 'text-gray-500 border-transparent bg-gray-100 shadow-sm opacity-60 hover:opacity-80'}`}
+                  style={isActive ? { backgroundColor: cc } : {}}
+                  onClick={() => {
+                    const next = new Set(disabledFilters);
+                    if (isActive) next.add(filterCat);
+                    else next.delete(filterCat);
+                    setDisabledFilters(next);
+                  }}
                 >
                   {filterCat}
                 </button>
@@ -218,7 +244,7 @@ export default function PackingList() {
             </button>
           </div>
           {Object.entries(categories)
-            .filter(([category]) => activeFilter === 'All' || category === activeFilter)
+            .filter(([category]) => !disabledFilters.has(category))
             .map(([category, catItems]) => {
               const color = getCategoryColor(category);
               return (
