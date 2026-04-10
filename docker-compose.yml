@@ -7,6 +7,10 @@ services:
     container_name: packinglist
     env_file:
       - .env.local
+    environment:
+      - GOOGLE_SERVICE_ACCOUNT_EMAIL=dummy_email@serviceaccount.com
+      - GOOGLE_PRIVATE_KEY=dummy_private_key
+      - GOOGLE_SHEET_ID=dummy_sheet_id
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.packinglist.rule=Host(`packing.phloots.com`)"
