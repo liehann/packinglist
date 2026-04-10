@@ -67,13 +67,17 @@ const EditableField = ({ value, placeholder, className, onSave }: { value: strin
   const handleBlur = () => { 
     if (val !== value) onSave(val); 
   };
+  
+  const isQty = className.includes('qty-field');
+
   return (
     <input 
       value={val} 
       onChange={e => setVal(e.target.value)} 
       onBlur={handleBlur} 
       onKeyDown={e => { if(e.key==='Enter') e.currentTarget.blur() }} 
-      className={`bg-transparent outline-none ring-0 w-full focus:bg-black/5 rounded px-1 -mx-1 transition-colors ${className}`} 
+      className={`bg-transparent outline-none ring-0 focus:bg-black/5 rounded transition-colors ${isQty ? '' : 'w-full px-1 -mx-1'} ${className}`} 
+      style={isQty ? { width: `${Math.max(1, val.toString().length) + 0.5}ch` } : {}}
       placeholder={placeholder} 
     />
   );
@@ -270,66 +274,66 @@ export default function PackingList() {
                                 <EditableField 
                                   value={item.item} 
                                   placeholder="Item name"
-                                  className={`text-sm font-semibold leading-6 block truncate ${item.packed ? 'line-through text-gray-400' : 'text-gray-900'}`}
+                                  className={`text-base font-semibold leading-6 block truncate ${item.packed ? 'line-through text-gray-400' : 'text-gray-900'}`}
                                   onSave={(val) => updateItemField(item.id, 'item', val)}
                                 />
                                 <div className="mt-1 flex items-center gap-x-2">
                                   <EditableField 
                                     value={item.notes} 
                                     placeholder="Add notes..."
-                                    className="text-xs leading-5 text-gray-500 placeholder:text-gray-400 block w-full"
+                                    className="text-sm leading-5 text-gray-500 placeholder:text-gray-400 block w-full"
                                     onSave={(val) => updateItemField(item.id, 'notes', val)}
                                   />
                                 </div>
                               </div>
 
                               {/* Quantity Badge */}
-                              <div className="shrink-0 flex items-center ml-2">
-                                <span className="inline-flex items-center justify-center rounded-md bg-gray-100 px-1 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 min-w-[28px]">
-                                  <EditableField 
-                                    value={item.quantity || '1'} 
-                                    placeholder="1"
-                                    className="w-5 text-center bg-transparent outline-none p-0 inline-block font-bold text-gray-900"
-                                    onSave={(val) => updateItemField(item.id, 'quantity', val)}
-                                  />
-                                </span>
-                              </div>
-                            </div>
-                          </div>
+                        <div className="shrink-0 flex items-center ml-2">
+                          <span className="inline-flex items-center justify-center rounded-md bg-gray-100 ring-1 ring-inset ring-gray-500/10 px-1 py-0.5">
+                            <EditableField 
+                              value={item.quantity || '1'} 
+                              placeholder="1"
+                              className="qty-field text-center bg-transparent outline-none m-0 p-0 inline-block text-sm font-medium text-gray-900"
+                              onSave={(val) => updateItemField(item.id, 'quantity', val)}
+                            />
+                          </span>
                         </div>
-                      );
-                    })}
-
-                    <form 
-                      className="mt-1 flex items-center bg-gray-50/50 rounded-xl p-3 border border-dashed border-gray-300 transition-all focus-within:bg-white focus-within:border-solid focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 focus-within:shadow-sm"
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        const form = e.currentTarget;
-                        const nameInput = form.elements.namedItem('itemName') as HTMLInputElement;
-                        const qtyInput = form.elements.namedItem('itemQty') as HTMLInputElement;
-                        handleInlineAdd(category, nameInput.value, qtyInput.value || '1');
-                        nameInput.value = '';
-                        qtyInput.value = '';
-                        nameInput.focus();
-                      }}
-                    >
-                      <Plus size={16} className="text-gray-400 mx-3 shrink-0" />
-                      <input 
-                        type="text" 
-                        name="itemName"
-                        className="flex-1 bg-transparent border-none outline-none text-gray-900 placeholder:text-gray-400 text-sm font-medium pr-2" 
-                        placeholder={`Add an item to ${category}...`}
-                        required
-                      />
-                      <input 
-                        type="text" 
-                        name="itemQty"
-                        className="w-12 bg-white ring-1 ring-gray-900/5 outline-none text-center text-sm font-medium rounded-md py-1 placeholder:text-gray-400 mr-1" 
-                        placeholder="Qty"
-                      />
-                      <button type="submit" className="hidden">Submit</button>
-                    </form>
+                      </div>
+                    </div>
                   </div>
+              );
+            })}
+            <form 
+              className="mt-1 flex items-center bg-gray-50/50 rounded-xl p-2 border border-dashed border-gray-300 transition-all focus-within:bg-white focus-within:border-solid focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 focus-within:shadow-sm"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const form = e.currentTarget;
+                const nameInput = form.elements.namedItem('itemName') as HTMLInputElement;
+                const qtyInput = form.elements.namedItem('itemQty') as HTMLInputElement;
+                handleInlineAdd(category, nameInput.value, qtyInput.value || '1');
+                nameInput.value = '';
+                qtyInput.value = '';
+                nameInput.focus();
+              }}
+            >
+              <Plus size={16} className="text-gray-400 mx-2 shrink-0" />
+              <input 
+                type="text" 
+                name="itemName"
+                className="flex-1 bg-transparent border-none outline-none text-gray-900 placeholder:text-gray-400 text-base font-medium pr-2 min-w-0" 
+                placeholder={`Add an item to ${category}...`}
+                required
+              />
+              <input 
+                type="text" 
+                name="itemQty"
+                className="qty-field bg-white ring-1 ring-gray-900/5 outline-none text-center text-sm font-semibold rounded-md p-1 placeholder:text-gray-400 mr-1 shrink-0" 
+                style={{ width: '3ch' }}
+                placeholder="#"
+              />
+              <button type="submit" className="hidden">Submit</button>
+            </form>
+          </div>
                 </div>
               );
           })}
