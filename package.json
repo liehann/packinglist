@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.2.2",
+    "framer-motion": "^12.38.0",
     "google-auth-library": "^10.6.2",
     "google-spreadsheet": "^5.2.0",
     "lucide-react": "^1.8.0",

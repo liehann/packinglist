@@ -102,18 +102,72 @@ export async function POST(request: Request) {
     
     await doc.loadInfo();
     const sheet = doc.sheetsByTitle['Phloots Packing List'];
-
-    await sheet.addRow({
-      'Category': category || 'Uncategorized',
-      'Item': item || 'New Item',
-      'Quantity (per person/family)': quantity || '1',
-      'Notes': notes || '',
-      'Packed': 'FALSE'
+    const rows = await sheet.getRows();
+    
+    // Find the first empty row (where both Category and Item are blank)
+    const emptyRow = rows.find((r: any) => {
+      const cat = r.get('Category');
+      const itm = r.get('Item');
+      return (!cat || String(cat).trim() === '') && (!itm || String(itm).trim() === '');
     });
+
+    if (emptyRow) {
+      emptyRow.set('Category', category || 'Uncategorized');
+      emptyRow.set('Item', item || 'New Item');
+      emptyRow.set('Packed', 'FALSE');
+      emptyRow.set('Notes', notes || '');
+      
+      const h = sheet.headerValues;
+      const qty = quantity || '1';
+      if (h.includes('Quantity (per person/family)')) emptyRow.set('Quantity (per person/family)', qty);
+      else if (h.includes('Quantity')) emptyRow.set('Quantity', qty);
+      else if (h.includes('Qty')) emptyRow.set('Qty', qty);
+      
+      await emptyRow.save();
+    } else {
+      await sheet.addRow({
+        'Category': category || 'Uncategorized',
+        'Item': item || 'New Item',
+        'Quantity (per person/family)': quantity || '1',
+        'Notes': notes || '',
+        'Packed': 'FALSE'
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Error appending row to Google Sheets:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const rowId = searchParams.get('rowId');
+
+    if (!rowId) {
+      return NextResponse.json({ error: 'Missing rowId' }, { status: 400 });
+    }
+
+    const auth = getAuth();
+    const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID!, auth);
+    
+    await doc.loadInfo();
+    const sheet = doc.sheetsByTitle['Phloots Packing List'];
+    const rows = await sheet.getRows();
+    
+    const row = rows.find(r => r.rowNumber === Number(rowId));
+
+    if (!row) {
+      return NextResponse.json({ error: 'Row not found' }, { status: 404 });
+    }
+
+    await row.delete();
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Error deleting from Google Sheets:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
