@@ -5,7 +5,6 @@ import { motion, useAnimation } from 'framer-motion';
 import { Check, BaggageClaim, Trash2, LoaderCircle } from 'lucide-react';
 import { Item } from '@/types/packing';
 import { matchIcon } from '@/utils/packing-utils';
-import { EditableField } from './EditableField';
 
 interface ItemRowProps {
   item: Item;
@@ -103,31 +102,22 @@ export const ItemRow = memo(({ item, color, showPacked, updateItemField, deleteI
           
           {/* Content */}
           <div className="flex-1 min-w-0 pr-4">
-            <EditableField 
-              value={item.item} 
-              placeholder="Item name"
-              className={`text-base font-semibold leading-6 block truncate ${item.packed ? 'line-through text-gray-400' : 'text-gray-900'}`}
-              onSave={(val) => updateItemField(item.id, 'item', val)}
-            />
-            <div className="mt-1 flex items-center gap-x-2">
-              <EditableField 
-                value={item.notes} 
-                placeholder="Add notes..."
-                className="text-sm leading-5 text-gray-500 placeholder:text-gray-400 block w-full"
-                onSave={(val) => updateItemField(item.id, 'notes', val)}
-              />
+            <div className={`text-base font-semibold leading-6 block truncate ${item.packed ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+              {item.item}
             </div>
+            {item.notes && (
+              <div className="mt-1 flex items-center gap-x-2">
+                <div className="text-sm leading-5 text-gray-500 truncate block w-full">
+                  {item.notes}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Quantity Badge */}
           <div className="shrink-0 flex items-center ml-2">
-            <span className="inline-flex items-center justify-center rounded-md bg-gray-100 ring-1 ring-inset ring-gray-500/10 px-1 py-0.5">
-              <EditableField 
-                value={item.quantity || '1'} 
-                placeholder="1"
-                className="qty-field text-center bg-transparent outline-none m-0 p-0 inline-block text-sm font-medium text-gray-900"
-                onSave={(val) => updateItemField(item.id, 'quantity', val)}
-              />
+            <span className="inline-flex items-center justify-center rounded-md bg-gray-100 ring-1 ring-inset ring-gray-500/10 px-2 py-0.5 text-sm font-medium text-gray-900">
+              {item.quantity || '1'}
             </span>
           </div>
       </motion.div>

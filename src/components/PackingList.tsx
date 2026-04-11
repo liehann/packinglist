@@ -305,11 +305,17 @@ export default function PackingList() {
                     <input 
                       type="text" 
                       name="itemQty"
-                      className="qty-field bg-white ring-1 ring-gray-900/5 outline-none text-center text-sm font-semibold rounded-md p-1 placeholder:text-gray-400 mr-1 shrink-0" 
+                      className="qty-field bg-white ring-1 ring-gray-900/5 outline-none text-center text-sm font-semibold rounded-md p-1 placeholder:text-gray-400 mr-2 shrink-0" 
                       style={{ width: '3ch' }}
                       placeholder="#"
                     />
-                    <button type="submit" className="hidden">Submit</button>
+                    <button 
+                      type="submit" 
+                      className="flex items-center justify-center text-white rounded-lg p-1.5 transition-all shadow-sm active:scale-95 hover:brightness-95"
+                      style={{ backgroundColor: color }}
+                    >
+                      <Plus size={18} strokeWidth={3} />
+                    </button>
                   </form>
                 </div>
               );
