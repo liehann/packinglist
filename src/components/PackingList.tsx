@@ -105,15 +105,45 @@ export default function PackingList() {
 
   const handleInlineAdd = useCallback(async (category: string, item: string, quantity: string) => {
     if (!item.trim()) return;
+    
+    const tempId = Date.now() * -1;
+    const newItem: Item = {
+      id: tempId,
+      category,
+      item,
+      quantity: quantity || '1',
+      notes: '',
+      packed: false,
+      loading: true
+    };
+
+    // Optimistic Update
+    mutate((currentData: any) => {
+      if (!currentData?.items) return currentData;
+      return { ...currentData, items: [...currentData.items, newItem] };
+    }, false);
+
     try {
-      await fetch('/api/packing-list', {
+      const response = await fetch('/api/packing-list', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ category, item, quantity, notes: '' }),
       });
+      
+      if (!response.ok) throw new Error('Failed to add item');
+      
+      // Success: Revalidate to get the real item from the server
       mutate();
     } catch (e) {
       console.error('Failed to inline add item', e);
+      // Rollback: Remove the temp item
+      mutate((currentData: any) => {
+        if (!currentData?.items) return currentData;
+        return { 
+          ...currentData, 
+          items: currentData.items.filter((i: Item) => i.id !== tempId) 
+        };
+      }, false);
     }
   }, [mutate]);
 

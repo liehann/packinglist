@@ -102,36 +102,65 @@ export async function POST(request: Request) {
     
     await doc.loadInfo();
     const sheet = doc.sheetsByTitle['Phloots Packing List'];
-    const rows = await sheet.getRows();
+    await sheet.loadHeaderRow();
+    const h = sheet.headerValues;
+    const catIdx = h.findIndex(hdr => hdr.toLowerCase() === 'category');
+    const itemIdx = h.findIndex(hdr => hdr.toLowerCase() === 'item');
+    const qtyIdx = h.findIndex(hdr => hdr.toLowerCase().includes('quantity') || hdr.toLowerCase() === 'qty');
+    const notesIdx = h.findIndex(hdr => hdr.toLowerCase() === 'notes');
+    const packedIdx = h.findIndex(hdr => hdr.toLowerCase() === 'packed');
+
+    const maxScanRows = 500;
+    const maxColIdx = Math.max(catIdx, itemIdx, qtyIdx, notesIdx, packedIdx, 0);
     
-    // Find the first empty row (where both Category and Item are blank)
-    const emptyRow = rows.find((r: any) => {
-      const cat = r.get('Category');
-      const itm = r.get('Item');
-      return (!cat || String(cat).trim() === '') && (!itm || String(itm).trim() === '');
+    // Load existing cells to find the first empty spot
+    await sheet.loadCells({
+      startRowIndex: 1, // Start from Row 2
+      endRowIndex: maxScanRows,
+      startColumnIndex: 0,
+      endColumnIndex: maxColIdx + 1
     });
 
-    if (emptyRow) {
-      emptyRow.set('Category', category || 'Uncategorized');
-      emptyRow.set('Item', item || 'New Item');
-      emptyRow.set('Packed', 'FALSE');
-      emptyRow.set('Notes', notes || '');
+    let targetRowIndex = -1;
+    for (let r = 1; r < maxScanRows; r++) {
+      const isCatEmpty = !sheet.getCell(r, catIdx).value;
+      const isItemEmpty = !sheet.getCell(r, itemIdx).value;
+      if (isCatEmpty && isItemEmpty) {
+        targetRowIndex = r;
+        break;
+      }
+    }
+
+    const qty = quantity || '1';
+    if (targetRowIndex !== -1) {
+      // Hybrid Step: Physically insert a row at the detected empty spot
+      // This ensures table expansion and no empty gaps
+      await sheet.insertDimension('ROWS', { startIndex: targetRowIndex, endIndex: targetRowIndex + 1 });
       
-      const h = sheet.headerValues;
-      const qty = quantity || '1';
-      if (h.includes('Quantity (per person/family)')) emptyRow.set('Quantity (per person/family)', qty);
-      else if (h.includes('Quantity')) emptyRow.set('Quantity', qty);
-      else if (h.includes('Qty')) emptyRow.set('Qty', qty);
-      
-      await emptyRow.save();
-    } else {
-      await sheet.addRow({
-        'Category': category || 'Uncategorized',
-        'Item': item || 'New Item',
-        'Quantity (per person/family)': quantity || '1',
-        'Notes': notes || '',
-        'Packed': 'FALSE'
+      // Load the newly inserted row's cells (since insertion shifts the grid)
+      await sheet.loadCells({
+        startRowIndex: targetRowIndex,
+        endRowIndex: targetRowIndex + 1,
+        startColumnIndex: 0,
+        endColumnIndex: maxColIdx + 1
       });
+
+      if (catIdx !== -1) sheet.getCell(targetRowIndex, catIdx).value = category || 'Uncategorized';
+      if (itemIdx !== -1) sheet.getCell(targetRowIndex, itemIdx).value = item || 'New Item';
+      if (qtyIdx !== -1) sheet.getCell(targetRowIndex, qtyIdx).value = qty;
+      if (notesIdx !== -1) sheet.getCell(targetRowIndex, notesIdx).value = notes || '';
+      if (packedIdx !== -1) sheet.getCell(targetRowIndex, packedIdx).value = 'FALSE';
+      
+      await sheet.saveUpdatedCells();
+    } else {
+      // Fallback: strictly append with insertion if no space found in first 500 rows
+      const payload: any = {};
+      if (catIdx !== -1) payload[h[catIdx]] = category || 'Uncategorized';
+      if (itemIdx !== -1) payload[h[itemIdx]] = item || 'New Item';
+      if (qtyIdx !== -1) payload[h[qtyIdx]] = qty;
+      if (notesIdx !== -1) payload[h[notesIdx]] = notes || '';
+      if (packedIdx !== -1) payload[h[packedIdx]] = 'FALSE';
+      await sheet.addRow(payload, { insert: true });
     }
 
     return NextResponse.json({ success: true });

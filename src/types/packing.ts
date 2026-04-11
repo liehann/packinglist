@@ -5,6 +5,7 @@ export interface Item {
   quantity: string;
   notes: string;
   packed: boolean;
+  loading?: boolean;
 }
 
 export interface UndoItem {

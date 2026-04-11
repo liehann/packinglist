@@ -2,7 +2,7 @@
 
 import React, { memo, useCallback } from 'react';
 import { motion, useAnimation } from 'framer-motion';
-import { Check, BaggageClaim, Trash2 } from 'lucide-react';
+import { Check, BaggageClaim, Trash2, LoaderCircle } from 'lucide-react';
 import { Item } from '@/types/packing';
 import { matchIcon } from '@/utils/packing-utils';
 import { EditableField } from './EditableField';
@@ -19,6 +19,7 @@ export const ItemRow = memo(({ item, color, showPacked, updateItemField, deleteI
   const controls = useAnimation();
   
   const handleDragEnd = useCallback(async (e: any, info: any) => {
+    if (item.loading) return;
     const offset = info.offset.x;
     if (offset > 80) {
       if (!showPacked) {
@@ -53,10 +54,10 @@ export const ItemRow = memo(({ item, color, showPacked, updateItemField, deleteI
         height: { duration: 0.3, ease: [0.4, 0, 0.2, 1] },
         opacity: { duration: 0.2 }
       }}
-      className="overflow-hidden relative group mb-3"
+      className="relative group mb-3 rounded-xl"
     >
       {/* BACKGROUND ACTION LAYER */}
-      <div className="absolute inset-0 flex items-center justify-between px-6 rounded-xl bg-gray-100/80">
+      <div className="absolute inset-0 flex items-center justify-between px-6 rounded-xl">
         <div className="flex items-center gap-2 text-emerald-600 font-medium">
            <BaggageClaim size={20} strokeWidth={2.5} />
            <span className="text-sm hidden sm:inline-block">Pack</span>
@@ -69,33 +70,34 @@ export const ItemRow = memo(({ item, color, showPacked, updateItemField, deleteI
 
       {/* FOREGROUND SWIPEABLE LAYER */}
       <motion.div 
-        drag="x"
+        drag={item.loading ? false : "x"}
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.5}
         dragTransition={{ bounceStiffness: 600, bounceDamping: 30 }}
         onDragEnd={handleDragEnd}
         animate={controls}
         style={{ touchAction: 'pan-y', willChange: 'transform' }}
-        className={`relative z-10 flex items-center bg-white rounded-xl p-4 ring-1 ring-gray-900/5 shadow-sm transition-opacity duration-200 ${item.packed ? 'bg-gray-100' : ''}`}
+        className={`relative z-10 flex items-center bg-white rounded-xl p-4 transition-opacity duration-200 ${item.packed ? 'bg-gray-100' : ''}`}
       >
           {/* Checkbox */}
           <div className="mr-3 pl-1 shrink-0">
             <button 
-              className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors ${item.packed ? 'text-gray-800 shadow-sm' : 'border-gray-300 bg-white text-transparent hover:border-gray-400'}`}
-              style={item.packed ? { backgroundColor: color, borderColor: color } : {}}
+              disabled={item.loading}
+              className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors ${item.loading ? 'border-gray-100 bg-gray-50' : item.packed ? 'text-gray-800 shadow-sm' : 'border-gray-300 bg-white text-transparent hover:border-gray-400'}`}
+              style={!item.loading && item.packed ? { backgroundColor: color, borderColor: color } : {}}
               onClick={() => updateItemField(item.id, 'packed', !item.packed)}
             >
-              <Check size={18} strokeWidth={3.5} className={item.packed ? 'opacity-80' : 'opacity-0'} />
+              {item.loading ? <LoaderCircle size={14} className="animate-spin text-gray-300" /> : <Check size={18} strokeWidth={3.5} className={item.packed ? 'opacity-80' : 'opacity-0'} />}
             </button>
           </div>
           
           {/* Icon Block */}
           <div 
             className="mr-4 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset ring-gray-900/10"
-            style={{ backgroundColor: color }}
+            style={{ backgroundColor: item.loading ? '#f9fafb' : color }}
           >
             <span className="text-gray-800/70">
-              {matchIcon(item.item, 20)}
+              {item.loading ? <LoaderCircle size={20} className="animate-spin text-gray-400" /> : matchIcon(item.item, 20)}
             </span>
           </div>
           
