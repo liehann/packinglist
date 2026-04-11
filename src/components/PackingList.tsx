@@ -245,41 +245,44 @@ export default function PackingList() {
             </button>
           </div>
 
-          {Object.entries(categories)
-            .filter(([category]) => selectedFilters.size === 0 || selectedFilters.has(category))
-            .map(([category, catItems]) => {
-              const color = getCategoryColor(category);
-              return (
-                <div key={category} className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <h2 
-                    className="text-xl font-medium text-stone-800 mb-3 pb-2 flex items-center gap-2 border-b-2"
-                    style={{ borderBottomColor: color }}
-                  >
-                    {category} 
-                    <span 
-                      className="text-xs px-2.5 py-0.5 rounded-full border border-black/5"
-                      style={{ backgroundColor: color }}
+          {(() => {
+            const allCategoryNames = Object.keys(categories);
+            return Object.entries(categories)
+              .filter(([category]) => selectedFilters.size === 0 || selectedFilters.has(category))
+              .map(([category, catItems]) => {
+                const color = getCategoryColor(category);
+                return (
+                  <div key={category} className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <h2 
+                      className="text-xl font-medium text-stone-800 mb-3 pb-2 flex items-center gap-2 border-b-2"
+                      style={{ borderBottomColor: color }}
                     >
-                      {catItems.filter(i => i.packed).length}/{catItems.length}
-                    </span>
-                  </h2>
-                  
-                  <div className="flex flex-col">
-                    <AnimatePresence initial={false}>
-                      {catItems
-                        .filter(item => showPacked || !item.packed)
-                        .map((item) => (
-                          <ItemRow 
-                            key={item.id} 
-                            item={item} 
-                            color={color} 
-                            showPacked={showPacked}
-                            updateItemField={updateItemField} 
-                            deleteItem={deleteItem} 
-                          />
-                        ))}
-                    </AnimatePresence>
-                  </div>
+                      {category} 
+                      <span 
+                        className="text-xs px-2.5 py-0.5 rounded-full border border-black/5"
+                        style={{ backgroundColor: color }}
+                      >
+                        {catItems.filter(i => i.packed).length}/{catItems.length}
+                      </span>
+                    </h2>
+                    
+                    <div className="flex flex-col">
+                      <AnimatePresence initial={false}>
+                        {catItems
+                          .filter(item => showPacked || !item.packed)
+                          .map((item) => (
+                            <ItemRow 
+                              key={item.id} 
+                              item={item} 
+                              color={color} 
+                              showPacked={showPacked}
+                              allCategories={allCategoryNames}
+                              updateItemField={updateItemField} 
+                              deleteItem={deleteItem} 
+                            />
+                          ))}
+                      </AnimatePresence>
+                    </div>
 
                   <form 
                     className="mt-1 flex items-center bg-gray-50/50 rounded-xl p-2 border border-dashed border-gray-300 transition-all focus-within:bg-white focus-within:border-solid focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 focus-within:shadow-sm"
@@ -318,8 +321,10 @@ export default function PackingList() {
                     </button>
                   </form>
                 </div>
-              );
-            })}
+                );
+              })
+          })()
+        }
         </div>
       </div>
 
