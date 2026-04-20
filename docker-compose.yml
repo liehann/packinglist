@@ -12,6 +12,4 @@ services:
       - GOOGLE_PRIVATE_KEY=${GOOGLE_PRIVATE_KEY}
       - GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID}
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.packinglist.rule=Host(`packing.phloots.com`)"
-      - "traefik.http.routers.packinglist.middlewares=protect-this-app@file"
+      - "coolify.traefik.middlewares=protect-this-app@file"
